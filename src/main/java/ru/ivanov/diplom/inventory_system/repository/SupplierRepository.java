@@ -1,0 +1,9 @@
+package ru.ivanov.diplom.inventory_system.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import ru.ivanov.diplom.inventory_system.entity.Supplier;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface SupplierRepository extends JpaRepository<Supplier, Long> {
+}
