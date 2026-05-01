@@ -23,30 +23,23 @@ public class AppUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException {
 
-        System.out.println("LOGIN TRY: " + username);
-        AppUser user = appUserRepository.findByUsername(username)
+        AppUser user = appUserRepository.findByUsernameWithDetails(username)
                 .orElseThrow(() ->
                         new UsernameNotFoundException("Пользователь не найден")
                 );
 
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
-        authorities.add(
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
-        );
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
 
         user.getPermissions().forEach(permission ->
-                authorities.add(
-                        new SimpleGrantedAuthority(permission.getCode())
-                )
+                authorities.add(new SimpleGrantedAuthority(permission.getCode()))
         );
-        System.out.println("USER FOUND: " + user.getUsername());
-        System.out.println("ACTIVE: " + user.getActive());
-        System.out.println("ROLE: " + user.getRole());
+
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPasswordHash(),
-                user.getActive(),
+                Boolean.TRUE.equals(user.getActive()),
                 true,
                 true,
                 true,

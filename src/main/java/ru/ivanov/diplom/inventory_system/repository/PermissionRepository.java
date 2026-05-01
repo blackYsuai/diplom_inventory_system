@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ru.ivanov.diplom.inventory_system.entity.Permission;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 
@@ -11,5 +13,7 @@ import java.util.Optional;
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
     Optional<Permission> findByCode(String code);
+
+    List<Permission> findAllByCodeIn(Collection<String> codes);
 
 }

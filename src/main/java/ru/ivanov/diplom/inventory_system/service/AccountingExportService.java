@@ -10,6 +10,7 @@ import ru.ivanov.diplom.inventory_system.dto.report.EquipmentStateReportRow;
 import ru.ivanov.diplom.inventory_system.entity.*;
 import ru.ivanov.diplom.inventory_system.entity.enums.ExportDataType;
 import ru.ivanov.diplom.inventory_system.entity.enums.ExportStatus;
+import ru.ivanov.diplom.inventory_system.entity.enums.TargetAccountingSystem;
 import ru.ivanov.diplom.inventory_system.exception.BadRequestException;
 import ru.ivanov.diplom.inventory_system.repository.AccountingExportRepository;
 import ru.ivanov.diplom.inventory_system.repository.DocumentItemRepository;
@@ -21,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
@@ -73,8 +75,29 @@ public class AccountingExportService {
 
     @Transactional(readOnly = true)
     public List<ExportHistoryResponse> getExportHistory() {
+        return getExportHistory(null, null, null, null, null);
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<ExportHistoryResponse> getExportHistory(
+            ExportStatus status,
+            ExportDataType exportType,
+            TargetAccountingSystem targetSystem,
+            LocalDate dateFrom,
+            LocalDate dateTo
+    ) {
         return accountingExportRepository.findAllByOrderByExportedAtDesc()
                 .stream()
+                .filter(record -> status == null || record.getStatus() == status)
+                .filter(record -> exportType == null || record.getExportType() == exportType)
+                .filter(record -> targetSystem == null || record.getTargetSystem() == targetSystem)
+                .filter(record -> dateFrom == null
+                        || record.getExportedAt() != null
+                        && !record.getExportedAt().toLocalDate().isBefore(dateFrom))
+                .filter(record -> dateTo == null
+                        || record.getExportedAt() != null
+                        && !record.getExportedAt().toLocalDate().isAfter(dateTo))
                 .map(this::toHistoryResponse)
                 .toList();
     }

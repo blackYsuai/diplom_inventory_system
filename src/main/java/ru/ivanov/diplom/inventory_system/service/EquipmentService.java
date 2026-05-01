@@ -4,9 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.ivanov.diplom.inventory_system.dto.document.DocumentResponse;
-import ru.ivanov.diplom.inventory_system.dto.equipment.EquipmentCreateRequest;
-import ru.ivanov.diplom.inventory_system.dto.equipment.EquipmentRegistrationResponse;
-import ru.ivanov.diplom.inventory_system.dto.equipment.EquipmentResponse;
+import ru.ivanov.diplom.inventory_system.dto.equipment.*;
 import ru.ivanov.diplom.inventory_system.entity.*;
 import ru.ivanov.diplom.inventory_system.entity.enums.DocumentTypeCode;
 import ru.ivanov.diplom.inventory_system.exception.BadRequestException;
@@ -20,6 +18,7 @@ import ru.ivanov.diplom.inventory_system.util.DocumentNumberGenerator;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -101,11 +100,115 @@ public class EquipmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<EquipmentResponse> getAllEquipment() {
+    public List<EquipmentResponse> getAllEquipment(
+            Long statusId,
+            Long categoryId,
+            Long locationId,
+            Long responsibleEmployeeId,
+            String search
+    ) {
+        String normalizedSearch = normalizeBlank(search);
+
         return equipmentRepository.findAll()
                 .stream()
+                .filter(equipment -> statusId == null
+                        || equipment.getStatus() != null
+                        && Objects.equals(equipment.getStatus().getId(), statusId))
+                .filter(equipment -> categoryId == null
+                        || equipment.getCategory() != null
+                        && Objects.equals(equipment.getCategory().getId(), categoryId))
+                .filter(equipment -> locationId == null
+                        || equipment.getLocation() != null
+                        && Objects.equals(equipment.getLocation().getId(), locationId))
+                .filter(equipment -> responsibleEmployeeId == null
+                        || equipment.getResponsibleEmployee() != null
+                        && Objects.equals(equipment.getResponsibleEmployee().getId(), responsibleEmployeeId))
+                .filter(equipment -> normalizedSearch == null
+                        || containsIgnoreCase(equipment.getInventoryNumber(), normalizedSearch)
+                        || containsIgnoreCase(equipment.getName(), normalizedSearch)
+                        || containsIgnoreCase(equipment.getModel(), normalizedSearch)
+                        || containsIgnoreCase(equipment.getSerialNumber(), normalizedSearch))
                 .map(equipmentMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EquipmentResponse> getAllEquipment() {
+        return getAllEquipment(null, null, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EquipmentHistoryItemResponse> getEquipmentHistory(Long equipmentId) {
+        if (!equipmentRepository.existsById(equipmentId)) {
+            throw new ResourceNotFoundException(
+                    "Оборудование с id " + equipmentId + " не найдено"
+            );
+        }
+
+        return documentItemRepository.findAllByEquipmentIdWithDocumentDetails(equipmentId)
+                .stream()
+                .map(this::toHistoryItemResponse)
+                .toList();
+    }
+
+    private EquipmentHistoryItemResponse toHistoryItemResponse(DocumentItem item) {
+        InventoryDocument document = item.getDocument();
+
+        List<String> writeOffReasons = item.getWriteOffReasons() == null
+                ? List.of()
+                : item.getWriteOffReasons()
+                .stream()
+                .map(WriteOffReason::getName)
+                .toList();
+
+        return new EquipmentHistoryItemResponse(
+                document != null ? document.getId() : null,
+                document != null ? document.getDocumentNumber() : null,
+                document != null ? document.getDocumentDate() : null,
+                document != null && document.getDocumentType() != null
+                        ? document.getDocumentType().getCode()
+                        : null,
+                document != null && document.getDocumentType() != null
+                        ? document.getDocumentType().getName()
+                        : null,
+
+                item.getId(),
+
+                getLocationName(item.getFromLocation()),
+                getLocationName(item.getToLocation()),
+
+                item.getFromEmployee() != null ? item.getFromEmployee().getFullName() : null,
+                item.getToEmployee() != null ? item.getToEmployee().getFullName() : null,
+
+                writeOffReasons,
+                item.getNote()
+        );
+    }
+
+    private String getLocationName(StorageLocation location) {
+        if (location == null) {
+            return null;
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        if (location.getName() != null) {
+            result.append(location.getName());
+        }
+
+        if (location.getBuilding() != null && !location.getBuilding().isBlank()) {
+            result.append(", ").append(location.getBuilding());
+        }
+
+        if (location.getRoom() != null && !location.getRoom().isBlank()) {
+            result.append(", каб. ").append(location.getRoom());
+        }
+
+        return result.toString();
+    }
+
+    private boolean containsIgnoreCase(String value, String search) {
+        return value != null && value.toLowerCase().contains(search.toLowerCase());
     }
 
     @Transactional(readOnly = true)
@@ -116,6 +219,99 @@ public class EquipmentService {
                 ));
 
         return equipmentMapper.toResponse(equipment);
+    }
+
+    @Transactional
+    public EquipmentResponse updateEquipment(Long id, EquipmentUpdateRequest request) {
+        Equipment equipment = equipmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Оборудование с id " + id + " не найдено"
+                ));
+
+        validateEquipmentUpdateRequest(id, request);
+
+        if (request.inventoryNumber() != null && !request.inventoryNumber().isBlank()) {
+            equipment.setInventoryNumber(request.inventoryNumber().trim());
+        }
+
+        if (request.name() != null && !request.name().isBlank()) {
+            equipment.setName(request.name().trim());
+        }
+
+        if (request.model() != null) {
+            equipment.setModel(normalizeBlank(request.model()));
+        }
+
+        if (request.serialNumber() != null) {
+            equipment.setSerialNumber(normalizeBlank(request.serialNumber()));
+        }
+
+        if (request.purchaseDate() != null) {
+            equipment.setPurchaseDate(request.purchaseDate());
+        }
+
+        if (request.commissioningDate() != null) {
+            equipment.setCommissioningDate(request.commissioningDate());
+        }
+
+        if (request.initialCost() != null) {
+            equipment.setInitialCost(request.initialCost());
+        }
+
+        if (request.usefulLifeMonths() != null) {
+            equipment.setUsefulLifeMonths(request.usefulLifeMonths());
+        }
+
+        if (request.description() != null) {
+            equipment.setDescription(request.description());
+        }
+
+        if (request.categoryId() != null) {
+            EquipmentCategory category = equipmentCategoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Категория оборудования с id " + request.categoryId() + " не найдена"
+                    ));
+
+            equipment.setCategory(category);
+        }
+
+        Equipment savedEquipment = equipmentRepository.save(equipment);
+
+        return equipmentMapper.toResponse(savedEquipment);
+    }
+
+    private void validateEquipmentUpdateRequest(Long equipmentId, EquipmentUpdateRequest request) {
+        if (request.inventoryNumber() != null && !request.inventoryNumber().isBlank()) {
+            String inventoryNumber = request.inventoryNumber().trim();
+
+            if (equipmentRepository.existsByInventoryNumberAndIdNot(inventoryNumber, equipmentId)) {
+                throw new BadRequestException(
+                        "Оборудование с инвентарным номером "
+                                + inventoryNumber
+                                + " уже существует"
+                );
+            }
+        }
+
+        if (request.serialNumber() != null && !request.serialNumber().isBlank()) {
+            String serialNumber = request.serialNumber().trim();
+
+            if (equipmentRepository.existsBySerialNumberAndIdNot(serialNumber, equipmentId)) {
+                throw new BadRequestException(
+                        "Оборудование с серийным номером "
+                                + serialNumber
+                                + " уже существует"
+                );
+            }
+        }
+
+        if (request.purchaseDate() != null
+                && request.commissioningDate() != null
+                && request.commissioningDate().isBefore(request.purchaseDate())) {
+            throw new BadRequestException(
+                    "Дата ввода в эксплуатацию не может быть раньше даты приобретения"
+            );
+        }
     }
 
     private void validateEquipmentCreateRequest(EquipmentCreateRequest request) {

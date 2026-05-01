@@ -19,7 +19,7 @@ public class CurrentUserService {
                 .getAuthentication()
                 .getName();
 
-        return appUserRepository.findByUsername(username)
+        return appUserRepository.findByUsernameWithDetails(username)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Текущий пользователь не найден")
                 );

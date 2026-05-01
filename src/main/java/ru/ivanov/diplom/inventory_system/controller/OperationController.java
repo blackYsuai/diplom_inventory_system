@@ -2,6 +2,7 @@ package ru.ivanov.diplom.inventory_system.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,13 +18,15 @@ import ru.ivanov.diplom.inventory_system.dto.operation.WriteOffEquipmentRequest;
 public class OperationController {
     private final InventoryOperationService inventoryOperationService;
 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('EQUIPMENT_MOVE')")
     @PostMapping("/move")
     public EquipmentOperationResponse moveEquipment(
             @Valid @RequestBody MoveEquipmentRequest request
     ) {
         return inventoryOperationService.moveEquipment(request);
     }
-    
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('EQUIPMENT_WRITE_OFF')")
     @PostMapping("/write-off")
     public EquipmentOperationResponse writeOffEquipment(
             @Valid @RequestBody WriteOffEquipmentRequest request

@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StorageLocationRepository extends JpaRepository<StorageLocation, Long> {
+
+    boolean existsByNameAndDepartmentId(String name, Long departmentId);
+
+    boolean existsByNameAndDepartmentIdAndIdNot(String name, Long departmentId, Long id);
 }

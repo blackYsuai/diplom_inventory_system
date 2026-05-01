@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import ru.ivanov.diplom.inventory_system.entity.enums.UserRole;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,6 +34,15 @@ public class AppUser {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Column(name = "must_change_password", nullable = false)
+    private Boolean mustChangePassword = false;
+
+    @Column(name = "password_expires_at")
+    private LocalDateTime passwordExpiresAt;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employee_id", nullable = false, unique = true)
     private Employee employee;
@@ -45,4 +55,19 @@ public class AppUser {
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     private Set<Permission> permissions = new HashSet<>();
+
+    @PrePersist
+    public void prePersist() {
+        if (active == null) {
+            active = true;
+        }
+
+        if (mustChangePassword == null) {
+            mustChangePassword = false;
+        }
+
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }
