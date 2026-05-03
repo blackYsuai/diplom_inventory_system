@@ -63,4 +63,13 @@ public class EquipmentController {
     ) {
         return equipmentService.updateEquipment(id, request);
     }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('EQUIPMENT_UPDATE')")
+    @PatchMapping("/{id}/status")
+    public EquipmentResponse changeEquipmentStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody EquipmentStatusChangeRequest request
+    ) {
+        return equipmentService.changeEquipmentStatus(id, request);
+    }
 }

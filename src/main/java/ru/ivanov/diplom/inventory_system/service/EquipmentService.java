@@ -7,6 +7,7 @@ import ru.ivanov.diplom.inventory_system.dto.document.DocumentResponse;
 import ru.ivanov.diplom.inventory_system.dto.equipment.*;
 import ru.ivanov.diplom.inventory_system.entity.*;
 import ru.ivanov.diplom.inventory_system.entity.enums.DocumentTypeCode;
+import ru.ivanov.diplom.inventory_system.entity.enums.EquipmentStatusName;
 import ru.ivanov.diplom.inventory_system.exception.BadRequestException;
 import ru.ivanov.diplom.inventory_system.exception.ResourceNotFoundException;
 import ru.ivanov.diplom.inventory_system.mapper.DocumentMapper;
@@ -58,6 +59,8 @@ public class EquipmentService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Местоположение с id " + request.locationId() + " не найдено"
                 ));
+
+        validateInitialStatus(status);
 
         Employee responsibleEmployee = employeeRepository.findById(request.responsibleEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -280,6 +283,39 @@ public class EquipmentService {
         return equipmentMapper.toResponse(savedEquipment);
     }
 
+    @Transactional
+    public EquipmentResponse changeEquipmentStatus(Long id, EquipmentStatusChangeRequest request) {
+        Equipment equipment = equipmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Оборудование с id " + id + " не найдено"
+                ));
+
+        if (equipment.getStatus() != null
+                && EquipmentStatusName.WRITTEN_OFF.getName().equals(equipment.getStatus().getName())) {
+            throw new BadRequestException("Нельзя изменить статус списанного оборудования");
+        }
+
+        EquipmentStatus newStatus = equipmentStatusRepository.findById(request.statusId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Статус оборудования с id " + request.statusId() + " не найден"
+                ));
+
+        if (EquipmentStatusName.WRITTEN_OFF.getName().equals(newStatus.getName())) {
+            throw new BadRequestException("Для списания оборудования используйте операцию списания");
+        }
+
+        if (equipment.getStatus() != null
+                && Objects.equals(equipment.getStatus().getId(), newStatus.getId())) {
+            throw new BadRequestException("У оборудования уже установлен выбранный статус");
+        }
+
+        equipment.setStatus(newStatus);
+
+        Equipment savedEquipment = equipmentRepository.save(equipment);
+
+        return equipmentMapper.toResponse(savedEquipment);
+    }
+
     private void validateEquipmentUpdateRequest(Long equipmentId, EquipmentUpdateRequest request) {
         if (request.inventoryNumber() != null && !request.inventoryNumber().isBlank()) {
             String inventoryNumber = request.inventoryNumber().trim();
@@ -399,5 +435,11 @@ public class EquipmentService {
         }
 
         return value.trim();
+    }
+
+    private void validateInitialStatus(EquipmentStatus status) {
+        if (!EquipmentStatusName.IN_USE.getName().equals(status.getName())) {
+            throw new BadRequestException("При регистрации оборудования начальный статус должен быть 'В эксплуатации'");
+        }
     }
 }

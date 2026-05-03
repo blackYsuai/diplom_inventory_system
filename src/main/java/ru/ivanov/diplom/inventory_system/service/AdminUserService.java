@@ -98,24 +98,33 @@ public class AdminUserService {
         Employee employee = user.getEmployee();
 
         if (request.lastName() != null && !request.lastName().isBlank()) {
-            employee.setLastName(request.lastName());
+            employee.setLastName(request.lastName().trim());
         }
 
         if (request.firstName() != null && !request.firstName().isBlank()) {
-            employee.setFirstName(request.firstName());
+            employee.setFirstName(request.firstName().trim());
         }
 
-        employee.setMiddleName(request.middleName());
-        employee.setPosition(request.position());
-        employee.setPhone(request.phone());
+        if (request.middleName() != null) {
+            employee.setMiddleName(normalizeBlank(request.middleName()));
+        }
 
-        if (request.email() != null && !request.email().isBlank()) {
-            if (!request.email().equals(employee.getEmail())
-                    && employeeRepository.existsByEmail(request.email())) {
-                throw new BadRequestException("Сотрудник с email " + request.email() + " уже существует");
+        if (request.position() != null) {
+            employee.setPosition(normalizeBlank(request.position()));
+        }
+
+        if (request.phone() != null) {
+            employee.setPhone(normalizeBlank(request.phone()));
+        }
+
+        if (request.email() != null) {
+            String email = normalizeBlank(request.email());
+
+            if (email != null && !email.equals(employee.getEmail()) && employeeRepository.existsByEmail(email)) {
+                throw new BadRequestException("Сотрудник с email " + email + " уже существует");
             }
 
-            employee.setEmail(request.email());
+            employee.setEmail(email);
         }
 
         if (request.departmentId() != null) {
@@ -337,5 +346,13 @@ public class AdminUserService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Пользователь с id " + id + " не найден"
                 ));
+    }
+
+    private String normalizeBlank(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
     }
 }

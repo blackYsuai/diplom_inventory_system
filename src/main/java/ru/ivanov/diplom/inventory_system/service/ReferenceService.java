@@ -34,7 +34,11 @@ public class ReferenceService {
     public List<ReferenceItemResponse> getCategories() {
         return equipmentCategoryRepository.findAll()
                 .stream()
-                .map(category -> new ReferenceItemResponse(category.getId(), category.getName()))
+                .map(category -> new ReferenceItemResponse(
+                        category.getId(),
+                        category.getName(),
+                        category.getDescription()
+                ))
                 .sorted(Comparator.comparing(ReferenceItemResponse::name))
                 .toList();
     }
@@ -43,7 +47,11 @@ public class ReferenceService {
     public List<ReferenceItemResponse> getStatuses() {
         return equipmentStatusRepository.findAll()
                 .stream()
-                .map(status -> new ReferenceItemResponse(status.getId(), status.getName()))
+                .map(status -> new ReferenceItemResponse(
+                        status.getId(),
+                        status.getName(),
+                        status.getDescription()
+                ))
                 .sorted(Comparator.comparing(ReferenceItemResponse::name))
                 .toList();
     }
@@ -52,7 +60,11 @@ public class ReferenceService {
     public List<ReferenceItemResponse> getDepartments() {
         return departmentRepository.findAll()
                 .stream()
-                .map(department -> new ReferenceItemResponse(department.getId(), department.getName()))
+                .map(department -> new ReferenceItemResponse(
+                        department.getId(),
+                        department.getName(),
+                        department.getDescription()
+                ))
                 .sorted(Comparator.comparing(ReferenceItemResponse::name))
                 .toList();
     }
@@ -88,7 +100,11 @@ public class ReferenceService {
     public List<ReferenceItemResponse> getWriteOffReasons() {
         return writeOffReasonRepository.findAll()
                 .stream()
-                .map(reason -> new ReferenceItemResponse(reason.getId(), reason.getName()))
+                .map(reason -> new ReferenceItemResponse(
+                        reason.getId(),
+                        reason.getName(),
+                        reason.getDescription()
+                ))
                 .sorted(Comparator.comparing(ReferenceItemResponse::name))
                 .toList();
     }
@@ -97,7 +113,11 @@ public class ReferenceService {
     public List<ReferenceItemResponse> getDocumentTypes() {
         return documentTypeRepository.findAll()
                 .stream()
-                .map(type -> new ReferenceItemResponse(type.getId(), type.getName()))
+                .map(type -> new ReferenceItemResponse(
+                        type.getId(),
+                        type.getName(),
+                        null
+                ))
                 .sorted(Comparator.comparing(ReferenceItemResponse::name))
                 .toList();
     }
@@ -106,7 +126,11 @@ public class ReferenceService {
     public List<ReferenceItemResponse> getPermissions() {
         return permissionRepository.findAll()
                 .stream()
-                .map(permission -> new ReferenceItemResponse(permission.getId(), permission.getCode()))
+                .map(permission -> new ReferenceItemResponse(
+                        permission.getId(),
+                        permission.getCode(),
+                        permission.getDescription()
+                ))
                 .sorted(Comparator.comparing(ReferenceItemResponse::name))
                 .toList();
     }

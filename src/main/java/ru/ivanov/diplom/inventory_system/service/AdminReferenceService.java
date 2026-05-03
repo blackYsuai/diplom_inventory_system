@@ -39,7 +39,7 @@ public class AdminReferenceService {
 
         EquipmentCategory saved = equipmentCategoryRepository.save(category);
 
-        return new ReferenceItemResponse(saved.getId(), saved.getName());
+        return new ReferenceItemResponse(saved.getId(), saved.getName(), saved.getDescription());
     }
 
     @Transactional
@@ -60,7 +60,7 @@ public class AdminReferenceService {
 
         EquipmentCategory saved = equipmentCategoryRepository.save(category);
 
-        return new ReferenceItemResponse(saved.getId(), saved.getName());
+        return new ReferenceItemResponse(saved.getId(), saved.getName(), saved.getDescription());
     }
 
 
@@ -79,7 +79,7 @@ public class AdminReferenceService {
 
         Department saved = departmentRepository.save(department);
 
-        return new ReferenceItemResponse(saved.getId(), saved.getName());
+        return new ReferenceItemResponse(saved.getId(), saved.getName(), saved.getDescription());
     }
 
     @Transactional
@@ -100,7 +100,7 @@ public class AdminReferenceService {
 
         Department saved = departmentRepository.save(department);
 
-        return new ReferenceItemResponse(saved.getId(), saved.getName());
+        return new ReferenceItemResponse(saved.getId(), saved.getName(), saved.getDescription());
     }
 
 
@@ -228,7 +228,7 @@ public class AdminReferenceService {
 
         WriteOffReason saved = writeOffReasonRepository.save(reason);
 
-        return new ReferenceItemResponse(saved.getId(), saved.getName());
+        return new ReferenceItemResponse(saved.getId(), saved.getName(), saved.getDescription());
     }
 
     @Transactional
@@ -249,7 +249,7 @@ public class AdminReferenceService {
 
         WriteOffReason saved = writeOffReasonRepository.save(reason);
 
-        return new ReferenceItemResponse(saved.getId(), saved.getName());
+        return new ReferenceItemResponse(saved.getId(), saved.getName(), saved.getDescription());
     }
 
     private ReferenceLocationResponse toLocationResponse(StorageLocation location) {
