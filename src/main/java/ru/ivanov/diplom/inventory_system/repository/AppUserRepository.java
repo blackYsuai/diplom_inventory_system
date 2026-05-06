@@ -48,4 +48,14 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
             order by u.id
             """)
     List<AppUser> findAllWithDetails();
+
+    @Query("""
+        select distinct u from AppUser u
+        join fetch u.employee e
+        left join fetch e.department
+        left join fetch u.permissions
+        where u.id <> :currentUserId
+        order by u.id
+        """)
+    List<AppUser> findAllWithDetailsExceptUserId(@Param("currentUserId") Long currentUserId);
 }

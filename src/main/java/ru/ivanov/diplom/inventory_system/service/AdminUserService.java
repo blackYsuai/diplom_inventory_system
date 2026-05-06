@@ -34,14 +34,16 @@ public class AdminUserService {
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final PermissionRepository permissionRepository;
-
+    private final CurrentUserService currentUserService;
     private final PasswordEncoder passwordEncoder;
     private final TemporaryPasswordGenerator temporaryPasswordGenerator;
     private final AdminUserMapper adminUserMapper;
 
     @Transactional(readOnly = true)
     public List<AdminUserResponse> getAllUsers() {
-        return appUserRepository.findAllWithDetails()
+        AppUser currentUser = currentUserService.getCurrentUser();
+
+        return appUserRepository.findAllWithDetailsExceptUserId(currentUser.getId())
                 .stream()
                 .map(adminUserMapper::toResponse)
                 .toList();
@@ -94,6 +96,7 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse updateUser(Long id, AdminUserUpdateRequest request) {
+        rejectSelfAdministration(id);
         AppUser user = getUserWithDetails(id);
         Employee employee = user.getEmployee();
 
@@ -156,6 +159,8 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse activateUser(Long id) {
+        rejectSelfAdministration(id);
+
         AppUser user = getUserWithDetails(id);
         user.setActive(true);
         appUserRepository.save(user);
@@ -165,6 +170,7 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse deactivateUser(Long id) {
+        rejectSelfAdministration(id);
         AppUser user = getUserWithDetails(id);
         user.setActive(false);
         appUserRepository.save(user);
@@ -174,6 +180,7 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse changeRole(Long id, SetUserRoleRequest request) {
+        rejectSelfAdministration(id);
         AppUser user = getUserWithDetails(id);
         user.setRole(request.role());
         appUserRepository.save(user);
@@ -183,6 +190,7 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse setPermissions(Long id, SetUserPermissionsRequest request) {
+        rejectSelfAdministration(id);
         AppUser user = getUserWithDetails(id);
         user.setPermissions(resolvePermissions(request.permissionCodes()));
         appUserRepository.save(user);
@@ -192,6 +200,7 @@ public class AdminUserService {
 
     @Transactional
     public PasswordResetResponse resetPassword(Long id) {
+        rejectSelfAdministration(id);
         AppUser user = getUserWithDetails(id);
 
         String temporaryPassword = temporaryPasswordGenerator.generate();
@@ -216,6 +225,7 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse addPermissions(Long id, SetUserPermissionsRequest request) {
+        rejectSelfAdministration(id);
         AppUser user = getUserWithDetails(id);
 
         Set<Permission> permissionsToAdd = resolvePermissions(request.permissionCodes());
@@ -229,6 +239,7 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse removePermissions(Long id, SetUserPermissionsRequest request) {
+        rejectSelfAdministration(id);
         AppUser user = getUserWithDetails(id);
 
         if (request.permissionCodes() == null || request.permissionCodes().isEmpty()) {
@@ -354,5 +365,15 @@ public class AdminUserService {
         }
 
         return value.trim();
+    }
+
+    private void rejectSelfAdministration(Long id) {
+        AppUser currentUser = currentUserService.getCurrentUser();
+
+        if (currentUser != null && Objects.equals(currentUser.getId(), id)) {
+            throw new BadRequestException(
+                    "Нельзя изменять собственную учетную запись через панель администрирования"
+            );
+        }
     }
 }

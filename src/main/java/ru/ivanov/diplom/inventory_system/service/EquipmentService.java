@@ -14,6 +14,7 @@ import ru.ivanov.diplom.inventory_system.mapper.DocumentMapper;
 import ru.ivanov.diplom.inventory_system.mapper.EquipmentMapper;
 import ru.ivanov.diplom.inventory_system.repository.*;
 import ru.ivanov.diplom.inventory_system.util.DocumentNumberGenerator;
+import ru.ivanov.diplom.inventory_system.util.InventoryNumberGenerator;
 
 
 import java.time.LocalDate;
@@ -36,6 +37,7 @@ public class EquipmentService {
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final DocumentItemRepository documentItemRepository;
 
+    private final InventoryNumberGenerator inventoryNumberGenerator;
     private final CurrentUserService currentUserService;
     private final DocumentNumberGenerator documentNumberGenerator;
     private final EquipmentMapper equipmentMapper;
@@ -67,8 +69,10 @@ public class EquipmentService {
                         "Ответственный сотрудник с id " + request.responsibleEmployeeId() + " не найден"
                 ));
 
+        String inventoryNumber = inventoryNumberGenerator.generate();
+
         Equipment equipment = Equipment.builder()
-                .inventoryNumber(request.inventoryNumber())
+                .inventoryNumber(inventoryNumber)
                 .name(request.name())
                 .model(request.model())
                 .serialNumber(normalizeBlank(request.serialNumber()))
@@ -231,38 +235,12 @@ public class EquipmentService {
                         "Оборудование с id " + id + " не найдено"
                 ));
 
-        validateEquipmentUpdateRequest(id, request);
-
-        if (request.inventoryNumber() != null && !request.inventoryNumber().isBlank()) {
-            equipment.setInventoryNumber(request.inventoryNumber().trim());
-        }
-
         if (request.name() != null && !request.name().isBlank()) {
             equipment.setName(request.name().trim());
         }
 
         if (request.model() != null) {
             equipment.setModel(normalizeBlank(request.model()));
-        }
-
-        if (request.serialNumber() != null) {
-            equipment.setSerialNumber(normalizeBlank(request.serialNumber()));
-        }
-
-        if (request.purchaseDate() != null) {
-            equipment.setPurchaseDate(request.purchaseDate());
-        }
-
-        if (request.commissioningDate() != null) {
-            equipment.setCommissioningDate(request.commissioningDate());
-        }
-
-        if (request.initialCost() != null) {
-            equipment.setInitialCost(request.initialCost());
-        }
-
-        if (request.usefulLifeMonths() != null) {
-            equipment.setUsefulLifeMonths(request.usefulLifeMonths());
         }
 
         if (request.description() != null) {
@@ -316,56 +294,12 @@ public class EquipmentService {
         return equipmentMapper.toResponse(savedEquipment);
     }
 
-    private void validateEquipmentUpdateRequest(Long equipmentId, EquipmentUpdateRequest request) {
-        if (request.inventoryNumber() != null && !request.inventoryNumber().isBlank()) {
-            String inventoryNumber = request.inventoryNumber().trim();
-
-            if (equipmentRepository.existsByInventoryNumberAndIdNot(inventoryNumber, equipmentId)) {
-                throw new BadRequestException(
-                        "Оборудование с инвентарным номером "
-                                + inventoryNumber
-                                + " уже существует"
-                );
-            }
-        }
-
-        if (request.serialNumber() != null && !request.serialNumber().isBlank()) {
-            String serialNumber = request.serialNumber().trim();
-
-            if (equipmentRepository.existsBySerialNumberAndIdNot(serialNumber, equipmentId)) {
-                throw new BadRequestException(
-                        "Оборудование с серийным номером "
-                                + serialNumber
-                                + " уже существует"
-                );
-            }
-        }
-
-        if (request.purchaseDate() != null
-                && request.commissioningDate() != null
-                && request.commissioningDate().isBefore(request.purchaseDate())) {
-            throw new BadRequestException(
-                    "Дата ввода в эксплуатацию не может быть раньше даты приобретения"
-            );
-        }
-    }
-
-    private void validateEquipmentCreateRequest(EquipmentCreateRequest request) {
-        if (equipmentRepository.existsByInventoryNumber(request.inventoryNumber())) {
-            throw new BadRequestException(
-                    "Оборудование с инвентарным номером "
-                            + request.inventoryNumber()
-                            + " уже существует"
-            );
-        }
-
+     private void validateEquipmentCreateRequest(EquipmentCreateRequest request) {
         String serialNumber = normalizeBlank(request.serialNumber());
 
         if (serialNumber != null && equipmentRepository.existsBySerialNumber(serialNumber)) {
             throw new BadRequestException(
-                    "Оборудование с серийным номером "
-                            + serialNumber
-                            + " уже существует"
+                    "Оборудование с серийным номером " + serialNumber + " уже существует"
             );
         }
 
@@ -377,7 +311,6 @@ public class EquipmentService {
             );
         }
     }
-
     private InventoryDocument createReceiptDocument(EquipmentCreateRequest request) {
         AppUser currentUser = currentUserService.getCurrentUser();
 

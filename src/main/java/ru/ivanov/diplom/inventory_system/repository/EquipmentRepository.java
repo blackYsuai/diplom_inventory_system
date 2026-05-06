@@ -38,4 +38,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     List<Equipment> findAllByResponsibleEmployeeIdWithDetails(
             @Param("employeeId") Long employeeId
     );
+
+    @Query(value = "select nextval('equipment_inventory_number_seq')", nativeQuery = true)
+    Long getNextInventoryNumberSequence();
 }

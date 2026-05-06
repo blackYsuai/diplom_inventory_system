@@ -10,9 +10,6 @@ import java.time.LocalDate;
 
 public record EquipmentCreateRequest(
 
-        @NotBlank(message = "Инвентарный номер обязателен")
-        String inventoryNumber,
-
         @NotBlank(message = "Наименование оборудования обязательно")
         String name,
 
